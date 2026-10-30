@@ -67,7 +67,10 @@ class HttpClientImpl @JvmOverloads constructor(
     private val client: OkHttpClient =
         OkHttpClient.Builder().dispatcher(dispatcher).connectionPool(connectionPool)
             .proxy(proxy)
-            .protocols(listOf(Protocol.HTTP_1_1))
+            // EXPERIMENT (exp-http2): does speaking HTTP/2 change a bot-managed CDN's verdict?
+            // Some bot rules key on HTTP/1.1-only Java stacks; ALPN + h2 framing changes the
+            // handshake signature. Revert if manifest probes still 403.
+            .protocols(listOf(Protocol.HTTP_2, Protocol.HTTP_1_1))
             .connectTimeout(30, TimeUnit.SECONDS).readTimeout(readTimeoutSeconds.toLong(), TimeUnit.SECONDS).retryOnConnectionFailure(false)
             .apply { if (ignoreCertErrors) trustAllCertificates(this) else sharedTls(this) }
             .apply { if (proxy != null) proxyAuthentication(this, proxy, proxyUser, proxyPassword) }
