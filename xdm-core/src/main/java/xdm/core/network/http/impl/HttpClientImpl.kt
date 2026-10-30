@@ -326,7 +326,7 @@ class HttpClientImpl @JvmOverloads constructor(
          */
         private fun installConscrypt() {
             try {
-                if (java.security.Security.getProvider(Conscrypt.PROVIDER_NAME) == null) {
+                if (java.security.Security.getProvider("Conscrypt") == null) {
                     java.security.Security.insertProviderAt(Conscrypt.newProvider(), 1)
                     Logger.info("XDM", "Conscrypt TLS provider installed")
                 }
