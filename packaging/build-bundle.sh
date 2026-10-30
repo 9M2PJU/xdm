@@ -332,6 +332,14 @@ strip_foreign_natives() {
   esac
 
   local fl_dir="com/formdev/flatlaf/natives/"
+  # Conscrypt's uber jar names its JNI libraries META-INF/native/*-<os>-<arch>.<ext>
+  # with its own os tokens (osx, not macos); only x86_64 targets ship one, so other
+  # architectures keep dropping everything as before.
+  local cc_os=""
+  case "$OS" in
+    mac)   cc_os=osx ;;
+    linux) cc_os=linux ;;
+  esac
 
   local before after entry
   local drop=()
@@ -339,8 +347,13 @@ strip_foreign_natives() {
   while IFS= read -r entry; do
     case "$entry" in
       "$fl_dir"*"-${fl_os}-${fl_arch}."*) continue ;;
-      *) drop+=("$entry") ;;
     esac
+    if [[ -n "$cc_os" && "$fl_arch" == x86_64 ]]; then
+      case "$entry" in
+        META-INF/native/*conscrypt*"-$cc_os-x86_64."*) continue ;;
+      esac
+    fi
+    drop+=("$entry")
   done < <(jar tf "$jar" | grep -E '\.(dylib|jnilib|so|dll)$' || true)
 
   if [[ ${#drop[@]} -eq 0 ]]; then

@@ -275,13 +275,17 @@ function Remove-ForeignNatives {
 
   $flArch = if ($Arch -eq 'arm64') { 'arm64' } else { 'x86_64' }
   $flKeep = "com/formdev/flatlaf/natives/*-windows-$flArch.*"
+  # The uber jar only ships a Conscrypt JNI library for x86_64 Windows; ARM64 keeps
+  # dropping everything as before.
+  $ccKeep = if ($Arch -eq 'arm64') { '' } else { 'META-INF/native/*conscrypt*-windows-x86_64.*' }
 
   $before = (Get-Item $Jar).Length
   $zip = [System.IO.Compression.ZipFile]::Open($Jar, 'Update')
   try {
     $doomed = @($zip.Entries | Where-Object {
       $_.FullName -match '\.(dylib|jnilib|so|dll)$' -and
-      -not ($_.FullName -like $flKeep)
+      -not ($_.FullName -like $flKeep) -and
+      ($ccKeep -eq '' -or -not ($_.FullName -like $ccKeep))
     })
     foreach ($entry in $doomed) { $entry.Delete() }
   } finally {
