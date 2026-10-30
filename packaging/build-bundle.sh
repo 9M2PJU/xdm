@@ -412,6 +412,21 @@ else
   FLATLAF_NATIVE=""
   echo ">> no FlatLaf native for $OS/$(uname -m) - FlatLaf extracts it from the jar at run time"
 fi
+# Conscrypt (BoringSSL) the same way: its JNI library comes from the uber jar's
+# META-INF/native/ with an OS-arch suffix, and its loader takes that same name from
+# java.library.path (the app dir) before falling back to extracting the jar copy.
+# The uber jar only ships x86_64 Linux/Windows/macOS; other targets keep platform TLS.
+CONSCRYPT_NATIVE=""
+case "$OS-$(uname -m)" in
+  mac-x86_64)   CONSCRYPT_NATIVE="libconscrypt_openjdk_jni-osx-x86_64.dylib" ;;
+  linux-x86_64) CONSCRYPT_NATIVE="libconscrypt_openjdk_jni-linux-x86_64.so" ;;
+esac
+if [[ -n "$CONSCRYPT_NATIVE" ]] &&
+   unzip -j -o -q "$APP_JAR" "META-INF/native/$CONSCRYPT_NATIVE" -d "$INPUT_DIR" 2>/dev/null; then
+  echo ">> Conscrypt native in app/: $CONSCRYPT_NATIVE"
+else
+  echo ">> no Conscrypt native for $OS/$(uname -m) - platform TLS is used"
+fi
 JIT_DIRECTIVES="jit-directives.json"
 cp "$PROJECT_ROOT/packaging/$JIT_DIRECTIVES" "$INPUT_DIR/"
 

@@ -343,6 +343,26 @@ try {
 } finally {
   $zip.Dispose()
 }
+# Conscrypt (BoringSSL) the same way: its JNI library from the uber jar's META-INF/native/,
+# loaded from app\ through the library path before the jar copy is tried. Only x86_64 ships
+# in the uber jar (conscrypt_openjdk_jni-windows-x86_64.dll); anything else keeps platform
+# TLS. Unlike FlatLaf above, a missing entry only warns: Conscrypt is optional by design.
+if ($Arch -ne 'arm64') {
+  $zip = [System.IO.Compression.ZipFile]::OpenRead($AppJar)
+  try {
+    $entry = $zip.GetEntry('META-INF/native/conscrypt_openjdk_jni-windows-x86_64.dll')
+    if ($entry) {
+      [System.IO.Compression.ZipFileExtensions]::ExtractToFile($entry, (Join-Path $InputDir 'conscrypt_openjdk_jni-windows-x86_64.dll'), $true)
+      Write-Host '>> Conscrypt native in app\: conscrypt_openjdk_jni-windows-x86_64.dll'
+    } else {
+      Write-Host ">> no Conscrypt native for windows-$Arch - platform TLS is used"
+    }
+  } finally {
+    $zip.Dispose()
+  }
+} else {
+  Write-Host ">> no Conscrypt native for windows-$Arch - platform TLS is used"
+}
 $JitDirectives = 'jit-directives.json'
 Copy-Item (Join-Path $PSScriptRoot $JitDirectives) $InputDir
 # No app\.package on Windows: without it the launcher never reads a per-user .cfg, so the installed one
