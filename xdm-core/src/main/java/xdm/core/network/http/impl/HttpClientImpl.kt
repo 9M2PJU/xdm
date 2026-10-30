@@ -314,6 +314,12 @@ class HttpClientImpl @JvmOverloads constructor(
     }
 
     private companion object {
+        // EXPERIMENT (exp-conscrypt): install eagerly so every TLS path uses it, including the
+        // trust-all branch below which never touches the lazy shared context.
+        init {
+            installConscrypt()
+        }
+
         /** The challenge OkHttp puts on the fake 407 it uses to ask for preemptive tunnel credentials. */
         const val PREEMPTIVE_CHALLENGE = "OkHttp-Preemptive"
 
