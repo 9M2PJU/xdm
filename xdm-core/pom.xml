@@ -98,6 +98,13 @@
             <artifactId>okhttp</artifactId>
             <version>4.12.0</version>
         </dependency>
+        <!-- EXPERIMENT (exp-conscrypt): BoringSSL provider so the TLS handshake looks like
+             Chrome's instead of JSSE's; see installConscrypt in HttpClientImpl. -->
+        <dependency>
+            <groupId>org.conscrypt</groupId>
+            <artifactId>conscrypt-openjdk-uber</artifactId>
+            <version>2.5.2</version>
+        </dependency>
         <!-- Source: https://mvnrepository.com/artifact/commons-httpclient/commons-httpclient -->
 <!--        <dependency>-->
 <!--            <groupId>commons-httpclient</groupId>-->

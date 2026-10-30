@@ -6,6 +6,7 @@ package xdm.core.network.http.impl
 import okhttp3.*
 import okio.ByteString.Companion.decodeBase64
 import okio.ByteString.Companion.toByteString
+import org.conscrypt.Conscrypt
 import xdm.core.CoreConfig
 import xdm.core.network.http.*
 import xdm.core.util.Logger
@@ -316,6 +317,24 @@ class HttpClientImpl @JvmOverloads constructor(
         /** The challenge OkHttp puts on the fake 407 it uses to ask for preemptive tunnel credentials. */
         const val PREEMPTIVE_CHALLENGE = "OkHttp-Preemptive"
 
+        /**
+         * EXPERIMENT (exp-conscrypt): prefer BoringSSL (Conscrypt) for the shared TLS context, so
+         * the ClientHello looks like Chrome's instead of JSSE's. Bot-managed CDNs (Cloudflare)
+         * 403 every probe from the JSSE stack while curl and browsers pass with identical URLs and
+         * headers. Any failure falls back silently to the platform default; revert if probes still
+         * 403.
+         */
+        private fun installConscrypt() {
+            try {
+                if (java.security.Security.getProvider(Conscrypt.PROVIDER_NAME) == null) {
+                    java.security.Security.insertProviderAt(Conscrypt.newProvider(), 1)
+                    Logger.info("XDM", "Conscrypt TLS provider installed")
+                }
+            } catch (e: Throwable) {
+                Logger.error("XDM", "Conscrypt unavailable, using platform TLS", e)
+            }
+        }
+
         /** Handshakes restarted with the same credentials before a bare NTLM challenge counts as a refusal. */
         const val NTLM_RESTARTS = 1
 
@@ -325,6 +344,7 @@ class HttpClientImpl @JvmOverloads constructor(
          */
         val sharedTlsConfig: Pair<SSLSocketFactory, X509TrustManager>? by lazy {
             try {
+                installConscrypt()
                 val trustManagerFactory =
                     TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
                 trustManagerFactory.init(null as KeyStore?)
